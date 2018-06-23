@@ -161,7 +161,7 @@ contract TESTToken {
         uint256 newTotalSale = totalSale_.add(tokens);
         require(newTotalSale <= MAX_SALE);                  //Check if there is enough available in sale
         uint256 newTotalSupply = totalSupply_.add(tokens);
-        assert(newTotalSupply <= MAX_SUPPLY);               //Check if there is enough available (should not happen)
+        require(newTotalSupply <= MAX_SUPPLY);               //Check if there is enough available (should not happen)
 
         balances_[msg.sender] = balances_[msg.sender].add(tokens);
         totalSupply_ = newTotalSupply;
@@ -243,7 +243,7 @@ contract TESTToken {
         uint256 newTotalAllocated = totalAllocated_.add(_value);
         require(newTotalAllocated <= MAX_ALLOCATION); //Check if there is enough available to allocate
         uint256 newTotalSupply = totalSupply_.add(_value);
-        assert(newTotalSupply <= MAX_SUPPLY);    //Check if there is enough available (should not happen)
+        require(newTotalSupply <= MAX_SUPPLY);    //Check if there is enough available (should not happen)
         
         balances_[_to] = balances_[_to].add(_value);
         totalSupply_ = newTotalSupply;
