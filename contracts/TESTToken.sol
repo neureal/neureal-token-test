@@ -187,6 +187,7 @@ contract TESTToken {
             }
             weiWithdrawn_ = newWeiWithdrawn;
         }
+        
         NEUREAL_ETH_WALLET.transfer(withdrawalValue);       //This works with our multisig (using 2300 gas stipend)
         // require(NEUREAL_ETH_WALLET.call.value(withdrawalValue)()); //alternative to be able to send more gas
     }
@@ -223,10 +224,10 @@ contract TESTToken {
         uint256 weiValue = pendingRefunds_[_who];
         pendingRefunds_[_who] = 0;
         totalRefunds_ = totalRefunds_.sub(weiValue);
+        emit Refunded(_who, weiValue);
+        
         _who.transfer(weiValue);
         // require(_who.call.value(weiValue)()); //TODO I think I need to use this alternative to send more gas than 2300 to be able to refund to contracts
-
-        emit Refunded(_who, weiValue);
     }
     
     
