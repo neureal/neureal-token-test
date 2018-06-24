@@ -84,8 +84,8 @@ it("creation: test correct setting of state variables", async() => {
     let whitelist_ = await instance.whitelist_.call(0);
     assert.strictEqual(whitelist_, false);
 
-    let state_ = await instance.state_.call();
-    assert.strictEqual(state_.toString(10), '0');
+    let phase_ = await instance.phase_.call();
+    assert.strictEqual(phase_.toString(10), '0');
 
     let totalSupply = await instance.totalSupply.call();
     assert.equal(totalSupply, 0);
@@ -202,16 +202,16 @@ it("transition: non-owner trying to call transition function should be reverted"
 it("transition: should cycle state from BeforeSale to Sale to Finalized using transition function, then revert on 3rd time", async () => {
     let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
 
-    let state_ = await instance.state_.call();
-    assert.strictEqual(state_.toString(10), '0');
+    let phase_ = await instance.phase_.call();
+    assert.strictEqual(phase_.toString(10), '0');
 
     let transition = await instance.transition({from: accounts[0]});
-    state_ = await instance.state_.call();
-    assert.strictEqual(state_.toString(10), '1');
+    phase_ = await instance.phase_.call();
+    assert.strictEqual(phase_.toString(10), '1');
 
     transition = await instance.transition({from: accounts[0]});
-    state_ = await instance.state_.call();
-    assert.strictEqual(state_.toString(10), '2');
+    phase_ = await instance.phase_.call();
+    assert.strictEqual(phase_.toString(10), '2');
 
     try {
         var result = await instance.transition({from: accounts[0]});
