@@ -43,7 +43,7 @@ contract TESTToken {
 
     //TODO change these values to the real values when going LIVE
     uint256 public constant MAX_SALE = 700 * 10**18; //Maximum token that can be purchased in the sale (70000000)
-    uint256 public constant MIN_PURCHASE = 7 * 10**18; //Minumum token that can be purchased (7000)
+    uint256 public constant MIN_PURCHASE = 7 * 10**18; //Minumum token that can be purchased (150000)
     uint256 public constant MAX_ALLOCATION = 50 * 10**18; //Maximum token that can be allocated by the owner (5000000)
     uint256 public constant MAX_SUPPLY = MAX_SALE + MAX_ALLOCATION; //Maximum token that can be created
     //Maximum value of ETH (in Wei) in the contract that can be withdrawn immediately after its sold. The rest can only be withdrawn after the sale has ended.
