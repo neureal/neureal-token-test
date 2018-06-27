@@ -64,9 +64,9 @@ contract TESTToken {
     uint256 public weiWithdrawn_ = 0;       //Current total Wei withdrawn to NEUREAL_ETH_WALLET
 
     uint256 public totalRefunds_ = 0;       //Current Wei locked up in refunds
-    mapping(address => uint256) private pendingRefunds_;
+    mapping(address => uint256) public pendingRefunds_;
 
-    uint256 private totalAllocated_ = 0;    //Current total token allocated
+    uint256 public totalAllocated_ = 0;    //Current total token allocated
 
     enum Phase {
         BeforeSale,
