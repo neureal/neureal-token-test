@@ -24,13 +24,17 @@ console.log('accounts[9] whitelist provider: ', accounts[9]);
 
 // let receipt = await web3.eth.sendTransaction({from: accounts[0], to: accounts[1], value: web3.toWei(1.0, "ether"), gas: 4712388, gasPrice: 100000000000});
 // console.log('receipt: ', receipt);
+let instance;
 
+beforeEach('some description', async () => {
+    // beforeEach:some description
+    instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
+
+});
 
 //CREATION
 
 it("creation: contract should deploy with less than 4.7 mil gas", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let receipt = await web3.eth.getTransactionReceipt(instance.transactionHash);
     console.log('Contract creation (gasUsed): ', receipt.gasUsed);
     assert.isBelow(receipt.gasUsed, 4700000);
@@ -44,7 +48,6 @@ it("creation: sending ether with contract deployment should revert", async () =>
 });
 
 it("creation: test correct setting of state variables", async() => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
 
     let OPENING_RATE = await instance.OPENING_RATE.call();
     assert.equal(OPENING_RATE, 7143);
@@ -92,8 +95,6 @@ it("creation: test correct setting of state variables", async() => {
 });
 
 it("creation: test correct setting of vanity information", async() => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let name = await instance.name.call();
     assert.strictEqual(name, 'Neureal TGE Test');
 
@@ -105,8 +106,6 @@ it("creation: test correct setting of vanity information", async() => {
 });
 
 it("creation: should return an initial balance of 0 token for the creator", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let estimateGas = await instance.balanceOf.estimateGas(accounts[0]);
     console.log('balanceOf() (estimateGas): ', estimateGas);
 
@@ -119,8 +118,6 @@ it("creation: should return an initial balance of 0 token for the creator", asyn
 //ERC20 Transfers
 
 it("transfers: ERC20 token transfer should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     try {
         var result = await instance.transfer(accounts[1], 100, {from: accounts[0]});
     } catch(err) { } //console.log(err.message); }
@@ -130,8 +127,6 @@ it("transfers: ERC20 token transfer should be reverted", async () => {
 //Allocate
 
 it("allocate: allocate if not owner should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     try {
         var result = await instance.allocate(accounts[2], 100 * 10**18, {from: accounts[1]});
     } catch(err) { } //console.log(err.message); }
@@ -139,8 +134,6 @@ it("allocate: allocate if not owner should be reverted", async () => {
 });
 
 it("allocate: allocate to address zero should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     try {
         var result = await instance.allocate(0, 100 * 10**18, {from: accounts[0]});
     } catch(err) { } //console.log(err.message); }
@@ -148,8 +141,6 @@ it("allocate: allocate to address zero should be reverted", async () => {
 });
 
 it("allocate: trying to allocate over MAX_ALLOCATION should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let MAX_ALLOCATION = await instance.MAX_ALLOCATION.call();
     try {
         var result = await instance.transfer(accounts[1], MAX_ALLOCATION.add(1), {from: accounts[0]});
@@ -158,8 +149,6 @@ it("allocate: trying to allocate over MAX_ALLOCATION should be reverted", async 
 });
 
 it("allocate: trying to allocate after state Finalized should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let transition = await instance.transition({from: accounts[0]});
     transition = await instance.transition({from: accounts[0]});
     try {
@@ -169,8 +158,6 @@ it("allocate: trying to allocate after state Finalized should be reverted", asyn
 });
 
 it("allocate: should allocate 10 TEST to multiple accounts[i] and emit Transfer events", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let allocate = await instance.allocate(accounts[1], 10 * 10**18, {from: accounts[0]});
     console.log('allocate (gasUsed): ', allocate.receipt.gasUsed);
     assert.isTrue(findEvent(allocate,"Transfer"));
@@ -191,8 +178,6 @@ it("allocate: should allocate 10 TEST to multiple accounts[i] and emit Transfer 
 //test special functions
 
 it("transition: non-owner trying to call transition function should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     try {
         var result = await instance.transition({from: accounts[1]});
     } catch(err) { } //console.log(err.message); }
@@ -200,8 +185,6 @@ it("transition: non-owner trying to call transition function should be reverted"
 });
 
 it("transition: should cycle state from BeforeSale to Sale to Finalized using transition function, then revert on 3rd time", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let phase_ = await instance.phase_.call();
     assert.strictEqual(phase_.toString(10), '0');
 
@@ -221,8 +204,6 @@ it("transition: should cycle state from BeforeSale to Sale to Finalized using tr
 });
 
 it("whitelist: non WHITELIST_PROVIDER trying to call whitelist function should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     try {
         var result = await instance.whitelist(accounts[1], {from: accounts[0]});
     } catch(err) { } //console.log(err.message); }
@@ -230,8 +211,6 @@ it("whitelist: non WHITELIST_PROVIDER trying to call whitelist function should b
 });
 
 it("whitelist: should add address to whitelist", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let whitelist = await instance.whitelist(accounts[1], {from: accounts[9]});
     let result = await instance.whitelist_(accounts[1]);
     assert.isTrue(result);
@@ -241,8 +220,6 @@ it("whitelist: should add address to whitelist", async () => {
 //Purchase
 
 it("purchase: trying to purchase over MAX_SALE should be reverted", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let transition = await instance.transition({from: accounts[0]}); //set to Sale
     let whitelist = await instance.whitelist(accounts[1], {from: accounts[9]}); //must be whitelisted
 
@@ -256,8 +233,6 @@ it("purchase: trying to purchase over MAX_SALE should be reverted", async () => 
 });
 
 it("purchase: should purchase token by sending ether to contract fallback function", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let transition = await instance.transition({from: accounts[0]}); //set to Sale
     let whitelist = await instance.whitelist(accounts[1], {from: accounts[9]}); //must be whitelisted
     
@@ -275,8 +250,6 @@ it("purchase: should purchase token by sending ether to contract fallback functi
 });
 
 it("withdrawl: should withdrawl all ether in the contract up to MAX_WEI_WITHDRAWAL", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-
     let transition = await instance.transition({from: accounts[0]}); //set to Sale
     let whitelist = await instance.whitelist(accounts[1], {from: accounts[9]}); //must be whitelisted
     
@@ -298,8 +271,6 @@ it("withdrawl: should withdrawl all ether in the contract up to MAX_WEI_WITHDRAW
 //Refund
 
 it("refund: should refund ETH and return their token to pool", async () => {
-    let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
-    
     let OPENING_RATE = await instance.OPENING_RATE.call();
 
     let transition = await instance.transition({from: accounts[0]}); //set to Sale
