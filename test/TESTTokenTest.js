@@ -326,4 +326,15 @@ it("refund: should refund ETH and return their token to pool", async () => {
 
 });
 
+// withdraw
+it("withdraw: should withdraw current avaialbe ETH only for owner", async () => {
+    let withdraw;
+    try {
+        withdraw = await instance.withdraw({from: accounts[4]});
+    } catch(err) {}
+    assert.isUndefined(withdraw);
+
+    withdraw = await instance.withdraw({from: CONTRACT_OWNER_ADDRESS})
+    assert.ok(withdraw)
+});
 });
