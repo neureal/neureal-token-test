@@ -24,7 +24,6 @@ library SafeMath {
 contract TESTToken {
     using SafeMath for uint256;
 
-    //TODO change all state variables to private when going LIVE
     /*** State Variables ***/
 
     //TODO Set this to the opening rate of token per ETH here based on https://www.coinbase.com/charts
@@ -49,31 +48,43 @@ contract TESTToken {
     //Maximum value of ETH (in Wei) in the contract that can be withdrawn immediately after its sold. The rest can only be withdrawn after the sale has ended.
     uint256 public constant MAX_WEI_WITHDRAWAL = (70 * 10**18) / OPENING_RATE; //(7000000)
 
-    address public owner_;                  //Contract creator
+    address private owner_;                         //Contract creator
+    function owner() external view returns (address) {
+        return owner_;
+    }
 
-    mapping(address => bool) public whitelist_;
+    mapping(address => bool) private whitelist_;    //List of addresses that can purchase token
+    function whitelisted(address _who) external view returns (bool) {
+        return whitelist_[_who];
+    }
 
-    uint256 private totalSale_ = 0;         //Current total token sold
+    uint256 private totalSale_ = 0;                 //Current total token sold
     function totalSale() external view returns (uint256) {
         return totalSale_;
     }
-    uint256 private totalWei_ = 0;          //Current total Wei recieved from sale
+    uint256 private totalWei_ = 0;                  //Current total Wei recieved from sale
     function totalWei() external view returns (uint256) {
         return totalWei_;
     }
-    uint256 public weiWithdrawn_ = 0;       //Current total Wei withdrawn to NEUREAL_ETH_WALLET
+    uint256 private totalAllocated_ = 0;             //Current total token allocated
+    function totalAllocated() external view returns (uint256) {
+        return totalAllocated_;
+    }
 
-    uint256 public totalRefunds_ = 0;       //Current Wei locked up in refunds
+    //TODO Make private when going LIVE ??
+    uint256 public weiWithdrawn_ = 0;               //Current total Wei withdrawn to NEUREAL_ETH_WALLET
+    uint256 public totalRefunds_ = 0;               //Current Wei locked up in refunds
     mapping(address => uint256) public pendingRefunds_;
-
-    uint256 public totalAllocated_ = 0;    //Current total token allocated
 
     enum Phase {
         BeforeSale,
         Sale,
         Finalized
     }
-    Phase public phase_ = Phase.BeforeSale;
+    Phase private phase_ = Phase.BeforeSale; //Current sale state
+    function phase() external view returns (Phase) {
+        return phase_;
+    }
 
 
     /*** Events ***/

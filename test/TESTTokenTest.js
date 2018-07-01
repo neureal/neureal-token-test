@@ -72,7 +72,7 @@ it("creation: test correct setting of state variables", async() => {
     console.log('MAX_WEI_WITHDRAWAL: ', MAX_WEI_WITHDRAWAL_test.dividedToIntegerBy(OPENING_RATE).toString());
     assert.isTrue(MAX_WEI_WITHDRAWAL.eq(MAX_WEI_WITHDRAWAL_test.dividedToIntegerBy(OPENING_RATE)));
 
-    let owner_ = await instance.owner_.call();
+    let owner_ = await instance.owner.call();
     assert.strictEqual(owner_, accounts[0]);
 
     let totalSale = await instance.totalSale.call();
@@ -81,11 +81,11 @@ it("creation: test correct setting of state variables", async() => {
     let totalWei = await instance.totalWei.call();
     assert.equal(totalWei, 0);
 
-    let whitelist_ = await instance.whitelist_.call(0);
-    assert.strictEqual(whitelist_, false);
+    let whitelisted = await instance.whitelisted.call(0);
+    assert.strictEqual(whitelisted, false);
 
-    let phase_ = await instance.phase_.call();
-    assert.strictEqual(phase_.toString(10), '0');
+    let phase = await instance.phase.call();
+    assert.strictEqual(phase.toString(10), '0');
 
     let totalSupply = await instance.totalSupply.call();
     assert.equal(totalSupply, 0);
@@ -202,16 +202,16 @@ it("transition: non-owner trying to call transition function should be reverted"
 it("transition: should cycle state from BeforeSale to Sale to Finalized using transition function, then revert on 3rd time", async () => {
     let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
 
-    let phase_ = await instance.phase_.call();
-    assert.strictEqual(phase_.toString(10), '0');
+    let phase = await instance.phase.call();
+    assert.strictEqual(phase.toString(10), '0');
 
     let transition = await instance.transition({from: accounts[0]});
-    phase_ = await instance.phase_.call();
-    assert.strictEqual(phase_.toString(10), '1');
+    phase = await instance.phase.call();
+    assert.strictEqual(phase.toString(10), '1');
 
     transition = await instance.transition({from: accounts[0]});
-    phase_ = await instance.phase_.call();
-    assert.strictEqual(phase_.toString(10), '2');
+    phase = await instance.phase.call();
+    assert.strictEqual(phase.toString(10), '2');
 
     try {
         var result = await instance.transition({from: accounts[0]});
@@ -233,7 +233,7 @@ it("whitelist: should add address to whitelist", async () => {
     let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
 
     let whitelist = await instance.whitelist(accounts[1], {from: accounts[9]});
-    let result = await instance.whitelist_(accounts[1]);
+    let result = await instance.whitelisted(accounts[1]);
     assert.isTrue(result);
 });
 
@@ -295,9 +295,9 @@ it("withdrawl: should withdrawl all ether in the contract up to MAX_WEI_WITHDRAW
     assert.isTrue(MAX_WEI_WITHDRAWAL.eq(balance_before.sub(balance_after)));
 });
 
-//Refund
+//Revert
 
-it("refund: should refund ETH and return their token to pool", async () => {
+it("revert: should refund ETH and return allocated token to pool", async () => {
     let instance = await TESTToken.new(accounts[8], accounts[9], {from: accounts[0], gas: deployGas, gasPrice: deployGasPrice});
     
     let OPENING_RATE = await instance.OPENING_RATE.call();
@@ -334,10 +334,10 @@ it("refund: should refund ETH and return their token to pool", async () => {
     assert.isTrue(balanceOf.eq(OPENING_RATE.times(value)));
 
 
-    // refund
-    let refund = await instance.refund(accounts[1], {from: accounts[0], value: value, gas: 4712388, gasPrice: 100000000000}); //execute refund
-    console.log('refund (gasUsed): ', refund.receipt.gasUsed);
-    assert.isTrue(findEvent(refund,"Transfer"));
+    // revert
+    let revert = await instance.revertPurchase(accounts[1], {from: accounts[0], value: value, gas: 4712388, gasPrice: 100000000000}); //execute revert
+    console.log('revertPurchase (gasUsed): ', revert.receipt.gasUsed);
+    assert.isTrue(findEvent(revert,"Transfer"));
 
     totalSupply = await instance.totalSupply.call();
     totalSale = await instance.totalSale.call();
@@ -345,7 +345,7 @@ it("refund: should refund ETH and return their token to pool", async () => {
     totalWei = await instance.totalWei.call();
     balance = await web3.eth.getBalance(instance.address);
     totalRefunds_ = await instance.totalRefunds_.call();
-    console.log('after refund: total_token[%s] sale_token[%s] buyer_token[%s]   tracked_contract_wei[%s] actual_contract_wei[%s] locked_refund_wei[%s]',
+    console.log('after revert: total_token[%s] sale_token[%s] buyer_token[%s]   tracked_contract_wei[%s] actual_contract_wei[%s] locked_refund_wei[%s]',
         totalSupply.toString(10), totalSale.toString(10), balanceOf.toString(10), totalWei.toString(10), balance.toString(10), totalRefunds_.toString(10));
     
     assert.isTrue(balanceOf.eq(0));
