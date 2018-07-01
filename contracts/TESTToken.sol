@@ -79,9 +79,9 @@ contract TESTToken {
     /*** Events ***/
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event TokenPurchase(uint256 _totalTokenSold, uint256 _totalWei);
-    event Refunded(address indexed _who, uint256 _weiValue);
+    event Refund(address indexed _who, uint256 _weiValue);
     event SaleStarted();
-    event Finalized();
+    event SaleFinalized();
 
 
     /*** ERC20 token standard ***/
@@ -168,7 +168,7 @@ contract TESTToken {
         totalSale_ = newTotalSale;
 
         totalWei_ = totalWei_.add(msg.value);
-        // NEUREAL_ETH_WALLET.transfer(msg.value);             //This is not safe, use withdraw and refund methods
+        // NEUREAL_ETH_WALLET.transfer(msg.value);             //This is not safe, use withdraw and revert methods
 
         emit Transfer(address(0), msg.sender, tokens);
         emit TokenPurchase(totalSale_, totalWei_);
@@ -193,15 +193,15 @@ contract TESTToken {
     }
 
 
-    /** Refund **/
+    /** Revert **/
 
-    /* lock ETH for refund, burn all owned token */
-    function refund(address _who) external payable {
-        require(phase_ == Phase.Sale);             //Only refund during sale, afterwords can refund using NEUREAL TGE
+    /* Revert token purchase, lock all ETH for refund, put all allocated token back in allocation pool */
+    function revertPurchase(address _who) external payable {
+        require(phase_ == Phase.Sale);             //Only revert during sale, afterwords can revert using NEUREAL TGE
         require(msg.sender == owner_);              //Only owner
         require(_who != address(0));                //Prevent refund to 0x0 address
         require(balances_[_who] != 0);              //Prevent if never purchased
-        require(pendingRefunds_[_who] == 0);        //Prevent if already refunded
+        require(pendingRefunds_[_who] == 0);        //Prevent if already reverted
         
         uint256 tokenValue = balances_[_who];
         uint256 weiValue = tokenValue.div(OPENING_RATE);
@@ -224,7 +224,7 @@ contract TESTToken {
         uint256 weiValue = pendingRefunds_[_who];
         pendingRefunds_[_who] = 0;
         totalRefunds_ = totalRefunds_.sub(weiValue);
-        emit Refunded(_who, weiValue);
+        emit Refund(_who, weiValue);
         
         _who.transfer(weiValue);
         // require(_who.call.value(weiValue)()); //TODO I think I need to use this alternative to send more gas than 2300 to be able to refund to contracts
@@ -266,7 +266,7 @@ contract TESTToken {
             emit SaleStarted();
         } else if (phase_ == Phase.Sale) {
             phase_ = Phase.Finalized;
-            emit Finalized();
+            emit SaleFinalized();
         }
     }
 
