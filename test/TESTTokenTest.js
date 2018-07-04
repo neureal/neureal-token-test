@@ -251,7 +251,7 @@ it("purchase: trying to purchase over MAX_SALE should be reverted", async () => 
     let value = MAX_SALE.dividedToIntegerBy(OPENING_RATE).add(1) ; //Amount to purchase with
     try {
         var result = await instance.sendTransaction({from: accounts[1], value: value, gas: 4712388, gasPrice: 100000000000});
-    } catch(err) { console.log(err.message); }
+    } catch(err) { } //console.log(err.message); }
     assert.isUndefined(result);
 });
 
