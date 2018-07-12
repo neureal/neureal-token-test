@@ -346,34 +346,32 @@ it("revert: should refund ETH and return allocated token to pool", async () => {
 it("withdraw: it should take everything out after Purchase put X ETH in contract", async () => {
     // Create contract, set to Sale, must be whitelisted
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+    let MAX_WEI_WITHDRAWAL = await instance.MAX_WEI_WITHDRAWAL.call();
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
     await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
 
     let initBalance = await web3.eth.getBalance(BUYER_ADDRESS);
-    let initRefunds = await instance.pendingRefunds_(BUYER_ADDRESS);
+    let value = web3.toWei(0.01, "ether");
 
     // 1. Purchase tokens on 0.01 ETH
-    let value = web3.toWei(0.01, "ether");
-    await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
-    let balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
-    assert.ok(initBalance.greaterThan(balanceAfter), 'Balance withdraw transaction cost');
+    await instance.sendTransaction({from: BUYER_ADDRESS, value: value, gas: 4712388, gasPrice: 100000000000});
+    const contractBalanceBeforeWithdraw = await web3.eth.getBalance(instance.address)
 
     // 2. Withdraw all contract balance ETH, except MAX_WEI_WITHDRAWAL value
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
+
     let contractAfterBalance = await web3.eth.getBalance(instance.address);
-    let MAX_WEI_WITHDRAWAL = await instance.MAX_WEI_WITHDRAWAL.call();
-    let valueBigNumber = new web3.BigNumber(value);
-    const contractEthLeft = valueBigNumber.sub(MAX_WEI_WITHDRAWAL);
-    
-    assert.equal(contractAfterBalance.toNumber(), contractEthLeft.toNumber(), 'Withdraw everything, but MAX_WEI_WITHDRAWAL should left')
+    const contractEthLeft = contractBalanceBeforeWithdraw.sub(MAX_WEI_WITHDRAWAL);
+    assert.isTrue(contractAfterBalance.eq(contractEthLeft), 'Withdraw everything, but MAX_WEI_WITHDRAWAL should left')
 
     // 3. Set Finalized phase for withdraw everything:
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
     
     // 4. Withdraw all ETH
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
+
     let contractFinalBalance = await web3.eth.getBalance(instance.address);
-    assert.equal(contractFinalBalance.toNumber(), 0, 'Should withdraw everything after sale ends')
+    assert.equal(contractFinalBalance, 0, 'Should withdraw everything after sale ends')
 
 });
 
@@ -383,32 +381,41 @@ it("withdraw: it should take only amount in contract, except X from purchase wic
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
     await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
 
+    let initContractBalance = await web3.eth.getBalance(instance.address);
     let initBalance = await web3.eth.getBalance(BUYER_ADDRESS);
     let initRefunds = await instance.pendingRefunds_(BUYER_ADDRESS);
 
     // 1. Purchase tokens on 0.01 ETH
     let value = web3.toWei(0.01, "ether");
-    await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    let transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    const tx = await web3.eth.getTransaction(transaction.tx);
+
     let balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
-    assert.ok(initBalance.greaterThan(balanceAfter), 'Balance withdraw transaction cost');
+    let contractBalanceAfter = await web3.eth.getBalance(instance.address);
+    
+    let transactionValue = new web3.BigNumber(value);
+    let transactionGasCost = tx.gasPrice.mul(transaction.receipt.gasUsed);
+    const transactionTotalCost = transactionValue.plus(transactionGasCost);
+    
+    assert.isTrue(contractBalanceAfter.sub(initContractBalance).eq(transactionValue), 'Contract receive sended value')
+    assert.isTrue(initBalance.minus(balanceAfter).eq(transactionTotalCost), 'User spend value + gas for transaction')
 
     // 2. Refund: Lock ETH to pendingRefund pool
     await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, value: value});
     let balanceAfterRevert = await web3.eth.getBalance(BUYER_ADDRESS);
     let pendingRefunds = await instance.pendingRefunds_(BUYER_ADDRESS);
 
-    assert.equal(balanceAfterRevert.toNumber(), balanceAfter.toNumber(), 'ETH should be locked, not sended');
-    assert.equal(pendingRefunds, value, 'Refunds should be placed to refund pool')
-    assert.ok(pendingRefunds.greaterThan(initRefunds), 'Pending refund is greater than initial refund state');
+    assert.isTrue(balanceAfterRevert.eq(balanceAfter), 'ETH should be locked, not sended');
+    assert.isTrue(pendingRefunds.eq(value), 'Refunds should be placed to refund pool')
 
-    // 3. Withdraw all contract balance ETH, except MAX_WEI_WITHDRAWAL value
+    // 3. Withdraw all contract balance ETH, except pendingRefund value
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
     let contractAfterBalance = await web3.eth.getBalance(instance.address);
-    let MAX_WEI_WITHDRAWAL = await instance.MAX_WEI_WITHDRAWAL.call();
-    let valueBigNumber = new web3.BigNumber(value);
-
-    assert.equal(contractAfterBalance.toNumber(), valueBigNumber.toNumber(10) + valueBigNumber.sub(MAX_WEI_WITHDRAWAL).toNumber(10),
-        'Should withdraw everything, except value from revert pending pool + MAX_WEI_WITHDRAWAL'
+    let totalRefunds_ = await instance.totalRefunds_.call();
+    console.log('contractAfterBalance: ', contractAfterBalance.toNumber())
+    console.log('pendingRefunds: ', pendingRefunds.toNumber())
+    assert.isTrue(contractBalanceAfter.eq(pendingRefunds),
+        'Should withdraw not more then MAX_WEI_WITHDRAWAL'
     );
 
     // 4. Set Finalized phase for withdraw everything:
@@ -417,7 +424,7 @@ it("withdraw: it should take only amount in contract, except X from purchase wic
     // 5. Withdraw all ETH
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
     let contractFinalBalance = await web3.eth.getBalance(instance.address);
-    assert.equal(contractFinalBalance.toNumber(), valueBigNumber.toNumber(10),
+    assert.isTrue(contractFinalBalance.eq(transactionValue),
         'Should withdraw everything including MAX_WEI_WITHDRAWAL, but refund pending pool should left'
     )
 
@@ -434,7 +441,7 @@ it("withdraw: It should take everything out but the X from purchase should alrea
 
     // 1. Purchase tokens on 0.01 ETH
     let value = web3.toWei(0.01, "ether");
-    await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    await instance.sendTransaction({from: BUYER_ADDRESS, value: value, gas: 4712388, gasPrice: 100000000000});
     let balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
     assert.ok(initBalance.greaterThan(balanceAfter), 'Balance withdraw transaction cost');
 
@@ -459,9 +466,9 @@ it("withdraw: It should take everything out but the X from purchase should alrea
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
     let contractAfterBalance = await web3.eth.getBalance(instance.address);
     let MAX_WEI_WITHDRAWAL = await instance.MAX_WEI_WITHDRAWAL.call();
-    let valueBigNumber = new web3.BigNumber(value);
+    let transactionValue = new web3.BigNumber(value);
 
-    assert.equal(contractAfterBalance.toNumber(), valueBigNumber.sub(MAX_WEI_WITHDRAWAL).toNumber(10),
+    assert.equal(contractAfterBalance.toNumber(), transactionValue.sub(MAX_WEI_WITHDRAWAL).toNumber(10),
         'Should withdraw everything, except value from revert pending pool + MAX_WEI_WITHDRAWAL'
     );
 
