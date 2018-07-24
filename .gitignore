@@ -1,6 +1,6 @@
 environments/*/contracts/**
 bin
-
+.vscode/
 # Logs
 logs
 *.log
