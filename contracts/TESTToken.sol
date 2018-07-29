@@ -27,8 +27,8 @@ contract TESTToken {
     /*** State Variables ***/
 
     //TODO Set this to the opening rate of token per ETH here based on https://www.coinbase.com/charts
-    //ex: $500 (per ETH) / $0.07 (opening price) = 7143 (works for wei as long as token decimals=18 because ETH=10^18 wei)
-    uint256 public constant OPENING_RATE = 7143;
+    //ex: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
+    uint256 public constant OPENING_RATE = 6400;
 
     //TODO use this as a constant when LIVE so that the source code signature includes it and is unique
     //TODO Set this to the Neureal multisig wallet that will take the ETH from the sale
