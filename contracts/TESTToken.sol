@@ -26,10 +26,6 @@ contract TESTToken {
 
     /*** State Variables ***/
 
-    //TODO Set this to the opening rate of token per ETH here based on https://www.coinbase.com/charts
-    //ex: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
-    uint256 public constant OPENING_RATE = 6400;
-
     //TODO use this as a constant when LIVE so that the source code signature includes it and is unique
     //TODO Set this to the Neureal multisig wallet that will take the ETH from the sale
     // address private constant NEUREAL_ETH_WALLET = 0x0000000000000000000000000000000000000000;
@@ -40,13 +36,17 @@ contract TESTToken {
     // address private constant WHITELIST_PROVIDER = 0x0000000000000000000000000000000000000000;
     address public WHITELIST_PROVIDER;
 
+    //TODO Set this to the opening rate of token per ETH here based on https://www.coinbase.com/charts
+    //ex: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
+    uint256 public constant OPENING_RATE = 6400;
+
     //TODO change these values to the real values when going LIVE
     uint256 public constant MAX_SALE = 700 * 10**18; //Maximum token that can be purchased in the sale (70000000)
     uint256 public constant MIN_PURCHASE = 7 * 10**18; //Minumum token that can be purchased (150000)
     uint256 public constant MAX_ALLOCATION = 50 * 10**18; //Maximum token that can be allocated by the owner (5000000)
     uint256 public constant MAX_SUPPLY = MAX_SALE + MAX_ALLOCATION; //Maximum token that can be created
     //Maximum value of ETH (in Wei) in the contract that can be withdrawn immediately after its sold. The rest can only be withdrawn after the sale has ended.
-    uint256 public constant MAX_WEI_WITHDRAWAL = (70 * 10**18) / OPENING_RATE; //(7000000)
+    uint256 public constant MAX_WEI_WITHDRAWAL = (70 * 10**18) / OPENING_RATE; //Maximum ETH that can be withdrawn during the sale (7000000)
 
     address private owner_;                                 //Contract creator
     function owner() external view returns (address) {
