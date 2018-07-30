@@ -454,5 +454,19 @@ it("should test calculateGasByTransaction", async () => {
     assert.isTrue(valueCalculated.eq(bigValue))
 
 });
+
+it('purchase: trying to purchase under MIN_PURCHASE should be reverted', async () => {
+  let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+  await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+  await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+  let value = web3.toWei(0.001, "ether");
+
+  let transaction;
+  try {
+    transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+  } catch (err) {};
+
+  assert.isUndefined(transaction);
+});
   
 });
