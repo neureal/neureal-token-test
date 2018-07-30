@@ -303,7 +303,7 @@ contract('TESTToken', async (accounts) => {
 
   // TODO what if they purchase multiple times before revert?
   // TODO what if they purchase again after revert?
-  // TODO what if they purchase again before sendRefund is called?
+  
 
   it('revert: should refund ETH and return allocated token to pool', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
@@ -364,6 +364,46 @@ contract('TESTToken', async (accounts) => {
     await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     const BUYER_BALANCE_AFTER = new web3.eth.getBalance(BUYER_ADDRESS)
     assert.isTrue(balanceBeforeWithPaidGas.eq(BUYER_BALANCE_AFTER));
+  });
+
+  // TODO what if they purchase again before sendRefund is called?
+  it('revert: should not affect purchase after revert and before sendRefund functions call', async () => {
+    const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    let OPENING_RATE = await instance.OPENING_RATE.call();
+    // 1. Purchase
+    const balanceBeforePurchase = new web3.eth.getBalance(BUYER_ADDRESS);
+    const valueFirst = web3.toWei(0.02, 'ether');
+    
+    const firstPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: valueFirst});
+    // 2. revertPurchase 
+    await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    // 3. Purchase here (again)
+    const valueSecond = web3.toWei(0.01, 'ether');
+    const secondPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: valueSecond});
+
+    let tokenBalance = await instance.balanceOf.call(BUYER_ADDRESS);
+    let openingRate = new web3.BigNumber(OPENING_RATE);
+    let bigValueSecond = new web3.BigNumber(valueSecond);
+    let buyedTokens = openingRate.mul(bigValueSecond);
+    // Check token balance for second purchase only
+    assert.isTrue(tokenBalance.eq(buyedTokens))
+    // 3. SendRefund called (Gas payed by contract creator)
+    await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    // Check that user still has tokens for second transaction
+    let buyerTokenBalance = await instance.balanceOf.call(BUYER_ADDRESS);
+    assert.isTrue(tokenBalance.eq(buyerTokenBalance));
+    // Check that refundSended for first purchase:
+    const balanceAfterPurchase = new web3.eth.getBalance(BUYER_ADDRESS);
+    
+    const firstTransactionGas = calculateGasByTransaction(firstPurchase);
+    const secondTransactionGas = calculateGasByTransaction(secondPurchase);
+    const totalPurchaseGas = firstTransactionGas.plus(secondTransactionGas);
+    const totalPurchaseValue = totalPurchaseGas.plus(bigValueSecond);
+
+    assert.isTrue(balanceAfterPurchase.eq(balanceBeforePurchase.minus(totalPurchaseValue)))
+
   });
 
   // Withdraw
