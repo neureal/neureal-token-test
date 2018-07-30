@@ -405,6 +405,34 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(balanceAfterPurchase.eq(balanceBeforePurchase.minus(totalPurchaseValue)))
 
   });
+  // TODO what if they purchase again before sendRefund is called?
+  it('revert: should not affect purchase after revert and before sendRefund functions call', async () => {
+    const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    const value = web3.toWei(0.02, 'ether');
+
+    const balanceBeforePurchase = new web3.eth.getBalance(BUYER_ADDRESS)
+    // 1. Purchase
+    const firstPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    // 2. Purchase here (again)
+    const secondPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    // 3. revertPurchase 
+    await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    // 4. SendRefund called (Gas payed by contract creator)
+    await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
+    
+    const balanceAfterRefund = new web3.eth.getBalance(BUYER_ADDRESS)
+
+    const firstTransactionGas = calculateGasByTransaction(firstPurchase);
+    const secondTransactionGas = calculateGasByTransaction(secondPurchase);
+    const totalGas = firstTransactionGas.plus(secondTransactionGas);
+    // Test refunded eth amount
+    assert.isTrue(balanceBeforePurchase.eq(balanceAfterRefund.plus(totalGas)))
+    // Test neureal tokens amount
+    let balanceOf = await instance.balanceOf.call(BUYER_ADDRESS);
+    assert.isTrue(balanceOf.eq(0));
+  });
 
   // Withdraw
 
