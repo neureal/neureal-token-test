@@ -11,6 +11,11 @@ function findEvent(res,evnt) {
     return false;
 }
 
+function calculateGasByTransaction(transaction) {
+    const tx = web3.eth.getTransaction(transaction.tx);
+    return tx.gasPrice.mul(transaction.receipt.gasUsed);
+}
+
 contract('TESTToken', async (accounts) => {
 
 //CONTRACT_CREATOR_ADDRESS is owner/contract creator
@@ -424,6 +429,25 @@ it("withdraw: It should take everything out, but the X from purchase should alre
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
     let contractBalance = web3.eth.getBalance(instance.address);
     assert.equal(contractBalance, 0)
+});
+
+it("should test calculateGasByTransaction", async () => {
+    let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    let value = web3.toWei(0.01, "ether");
+    const bigValue = web3.toBigNumber(value)
+    const balanceBefore = await web3.eth.getBalance(BUYER_ADDRESS);
+    const transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    const balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
+
+    const gasTotal = calculateGasByTransaction(transaction);
+
+    const balanceDiff = balanceBefore.sub(balanceAfter);
+    const valueCalculated = balanceDiff.sub(gasTotal);
+
+    assert.isTrue(valueCalculated.eq(bigValue))
+
 });
 
 });
