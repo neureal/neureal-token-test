@@ -63,7 +63,7 @@ contract TESTToken {
         return totalSale_;
     }
     uint256 private totalSaleWei_ = 0;                      //Current total Wei recieved from sale (only for viewing)
-    function totalWei() external view returns (uint256) {
+    function totalSaleWei() external view returns (uint256) {
         return totalSaleWei_;
     }
     uint256 private totalAllocated_ = 0;                    //Current total token allocated (only for viewing)
