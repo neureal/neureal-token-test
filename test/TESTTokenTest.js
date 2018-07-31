@@ -11,9 +11,9 @@ function findEvent (res, evnt) {
   return false;
 }
 
-function calculateGasByTransaction(transaction) {
-    const tx = web3.eth.getTransaction(transaction.tx);
-    return tx.gasPrice.mul(transaction.receipt.gasUsed);
+function calculateGasByTransaction (transaction) {
+  const tx = web3.eth.getTransaction(transaction.tx);
+  return tx.gasPrice.mul(transaction.receipt.gasUsed);
 }
 
 function toETHString (bignum) {
@@ -202,6 +202,24 @@ contract('TESTToken', async (accounts) => {
   // SPECIAL
   // test special functions
 
+  it('should test calculateGasByTransaction', async () => {
+    let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    let value = web3.toWei(0.01, 'ether');
+    const bigValue = web3.toBigNumber(value);
+    const balanceBefore = await web3.eth.getBalance(BUYER_ADDRESS);
+    const transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
+    const balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
+
+    const gasTotal = calculateGasByTransaction(transaction);
+
+    const balanceDiff = balanceBefore.sub(balanceAfter);
+    const valueCalculated = balanceDiff.sub(gasTotal);
+
+    assert.isTrue(valueCalculated.eq(bigValue));
+  });
+
   it('transition: non-owner trying to call transition function should be reverted', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
 
@@ -250,9 +268,18 @@ contract('TESTToken', async (accounts) => {
 
   // Purchase
 
-  // TODO
-  // it('purchase: trying to purchase under MIN_PURCHASE should be reverted', async () => {
-  // });
+  it('purchase: trying to purchase under MIN_PURCHASE should be reverted', async () => {
+    let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    let value = web3.toWei(0.001, 'ether');
+
+    try {
+      var transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value, gas: 4712388, gasPrice: 100000000000});
+    } catch (err) { } // console.log(err.message); }
+
+    assert.isUndefined(transaction);
+  });
 
   it('purchase: trying to purchase over MAX_SALE should be reverted', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
@@ -303,7 +330,6 @@ contract('TESTToken', async (accounts) => {
 
   // TODO what if they purchase multiple times before revert?
   // TODO what if they purchase again after revert?
-  
 
   it('revert: should refund ETH and return allocated token to pool', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
@@ -342,7 +368,7 @@ contract('TESTToken', async (accounts) => {
     // 1. Purchase (again)
     const value = web3.toWei(0.01, 'ether');
     const bigValue = new web3.BigNumber(value);
-    let BUYER_BALANCE_BEFORE = new web3.eth.getBalance(BUYER_ADDRESS)
+    let BUYER_BALANCE_BEFORE = new web3.eth.getBalance(BUYER_ADDRESS);
     let transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
     let transactionCost = calculateGasByTransaction(transaction);
 
@@ -352,7 +378,7 @@ contract('TESTToken', async (accounts) => {
     transactionCost = transactionCost.plus(calculateGasByTransaction(transaction));
 
     let balanceBeforeWithPaidGas = BUYER_BALANCE_BEFORE.sub(transactionCost);
-    // 2. revertPurchase 
+    // 2. revertPurchase
     await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     let pendingRefunds_ = await instance.pendingRefunds_.call(BUYER_ADDRESS);
 
@@ -362,7 +388,7 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(buyerTokenBalance.eq(0));
     // 3. SendRefund called (Gas payed by contract creator)
     await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
-    const BUYER_BALANCE_AFTER = new web3.eth.getBalance(BUYER_ADDRESS)
+    const BUYER_BALANCE_AFTER = new web3.eth.getBalance(BUYER_ADDRESS);
     assert.isTrue(balanceBeforeWithPaidGas.eq(BUYER_BALANCE_AFTER));
   });
 
@@ -375,9 +401,9 @@ contract('TESTToken', async (accounts) => {
     // 1. Purchase
     const balanceBeforePurchase = new web3.eth.getBalance(BUYER_ADDRESS);
     const valueFirst = web3.toWei(0.02, 'ether');
-    
+
     const firstPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: valueFirst});
-    // 2. revertPurchase 
+    // 2. revertPurchase
     await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     // 3. Purchase here (again)
     const valueSecond = web3.toWei(0.01, 'ether');
@@ -388,7 +414,7 @@ contract('TESTToken', async (accounts) => {
     let bigValueSecond = new web3.BigNumber(valueSecond);
     let buyedTokens = openingRate.mul(bigValueSecond);
     // Check token balance for second purchase only
-    assert.isTrue(tokenBalance.eq(buyedTokens))
+    assert.isTrue(tokenBalance.eq(buyedTokens));
     // 3. SendRefund called (Gas payed by contract creator)
     await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     // Check that user still has tokens for second transaction
@@ -396,15 +422,15 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(tokenBalance.eq(buyerTokenBalance));
     // Check that refundSended for first purchase:
     const balanceAfterPurchase = new web3.eth.getBalance(BUYER_ADDRESS);
-    
+
     const firstTransactionGas = calculateGasByTransaction(firstPurchase);
     const secondTransactionGas = calculateGasByTransaction(secondPurchase);
     const totalPurchaseGas = firstTransactionGas.plus(secondTransactionGas);
     const totalPurchaseValue = totalPurchaseGas.plus(bigValueSecond);
 
-    assert.isTrue(balanceAfterPurchase.eq(balanceBeforePurchase.minus(totalPurchaseValue)))
-
+    assert.isTrue(balanceAfterPurchase.eq(balanceBeforePurchase.minus(totalPurchaseValue)));
   });
+
   // TODO what if they purchase again before sendRefund is called?
   it('revert: should not affect purchase after revert and before sendRefund functions call', async () => {
     const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
@@ -412,23 +438,23 @@ contract('TESTToken', async (accounts) => {
     await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
     const value = web3.toWei(0.02, 'ether');
 
-    const balanceBeforePurchase = new web3.eth.getBalance(BUYER_ADDRESS)
+    const balanceBeforePurchase = new web3.eth.getBalance(BUYER_ADDRESS);
     // 1. Purchase
     const firstPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
     // 2. Purchase here (again)
     const secondPurchase = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
-    // 3. revertPurchase 
+    // 3. revertPurchase
     await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     // 4. SendRefund called (Gas payed by contract creator)
     await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
-    
-    const balanceAfterRefund = new web3.eth.getBalance(BUYER_ADDRESS)
+
+    const balanceAfterRefund = new web3.eth.getBalance(BUYER_ADDRESS);
 
     const firstTransactionGas = calculateGasByTransaction(firstPurchase);
     const secondTransactionGas = calculateGasByTransaction(secondPurchase);
     const totalGas = firstTransactionGas.plus(secondTransactionGas);
     // Test refunded eth amount
-    assert.isTrue(balanceBeforePurchase.eq(balanceAfterRefund.plus(totalGas)))
+    assert.isTrue(balanceBeforePurchase.eq(balanceAfterRefund.plus(totalGas)));
     // Test neureal tokens amount
     let balanceOf = await instance.balanceOf.call(BUYER_ADDRESS);
     assert.isTrue(balanceOf.eq(0));
@@ -533,40 +559,6 @@ contract('TESTToken', async (accounts) => {
     // 6. Withdraw all ETH
     await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS});
     let contractBalance = web3.eth.getBalance(instance.address);
-    assert.equal(contractBalance, 0)
-});
-
-it("should test calculateGasByTransaction", async () => {
-    let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
-    await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
-    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
-    let value = web3.toWei(0.01, "ether");
-    const bigValue = web3.toBigNumber(value)
-    const balanceBefore = await web3.eth.getBalance(BUYER_ADDRESS);
-    const transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
-    const balanceAfter = await web3.eth.getBalance(BUYER_ADDRESS);
-
-    const gasTotal = calculateGasByTransaction(transaction);
-
-    const balanceDiff = balanceBefore.sub(balanceAfter);
-    const valueCalculated = balanceDiff.sub(gasTotal);
-
-    assert.isTrue(valueCalculated.eq(bigValue))
-
-});
-
-it('purchase: trying to purchase under MIN_PURCHASE should be reverted', async () => {
-  let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
-  await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
-  await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
-  let value = web3.toWei(0.001, "ether");
-
-  let transaction;
-  try {
-    transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
-  } catch (err) {};
-
-  assert.isUndefined(transaction);
-});
-  
+    assert.equal(contractBalance, 0);
+  });
 });
