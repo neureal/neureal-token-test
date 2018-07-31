@@ -185,7 +185,7 @@ contract TESTToken {
         emit TokenPurchase(totalSale_, totalSaleWei_);
     }
     
-    /* Withdrawl current available ETH in contract */
+    /* Withdraw current available ETH in contract */
     function withdraw() external {
         require(msg.sender == owner_);                      //Only owner
         uint256 withdrawalValue = address(this).balance.sub(totalRefunds_);
