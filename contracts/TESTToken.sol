@@ -58,15 +58,15 @@ contract TESTToken {
         return whitelist_[_who];
     }
 
-    uint256 private totalSale_ = 0;                         //Current total token sold
+    uint256 private totalSale_ = 0;                         //Current total token sold (only for viewing)
     function totalSale() external view returns (uint256) {
         return totalSale_;
     }
-    uint256 private totalWei_ = 0;                          //Current total Wei recieved from sale
+    uint256 private totalSaleWei_ = 0;                      //Current total Wei recieved from sale (only for viewing)
     function totalWei() external view returns (uint256) {
-        return totalWei_;
+        return totalSaleWei_;
     }
-    uint256 private totalAllocated_ = 0;                    //Current total token allocated
+    uint256 private totalAllocated_ = 0;                    //Current total token allocated (only for viewing)
     function totalAllocated() external view returns (uint256) {
         return totalAllocated_;
     }
@@ -178,11 +178,11 @@ contract TESTToken {
         totalSupply_ = newTotalSupply;
         totalSale_ = newTotalSale;
 
-        totalWei_ = totalWei_.add(msg.value);
+        totalSaleWei_ = totalSaleWei_.add(msg.value);
         // NEUREAL_ETH_WALLET.transfer(msg.value);             //This is not safe, use withdraw and revert methods
 
         emit Transfer(address(0), msg.sender, tokens);
-        emit TokenPurchase(totalSale_, totalWei_);
+        emit TokenPurchase(totalSale_, totalSaleWei_);
     }
     
     /* Withdrawl current available ETH in contract */
@@ -221,6 +221,7 @@ contract TESTToken {
         require(address(this).balance >= weiValue);         //Must have enough wei in contract after payable to lock up
         totalRefunds_ = totalRefunds_.add(weiValue);
         pendingRefunds_[_who] = weiValue;
+        totalSaleWei_ = totalSaleWei_.sub(weiValue);
 
         totalSupply_ = totalSupply_.sub(tokenValue);
         totalSale_ = totalSale_.sub(tokenValue);
