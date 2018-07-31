@@ -206,6 +206,7 @@ contract('TESTToken', async (accounts) => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
     await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
+    
     let value = web3.toWei(0.01, 'ether');
     const bigValue = web3.toBigNumber(value);
     const balanceBefore = await web3.eth.getBalance(BUYER_ADDRESS);
@@ -328,9 +329,6 @@ contract('TESTToken', async (accounts) => {
       toETHString(totalSupply), toETHString(totalSale), toETHString(balanceOf), toETHString(totalWei), toETHString(contractBalance), toETHString(totalRefunds_));
   }
 
-  // TODO what if they purchase multiple times before revert?
-  // TODO what if they purchase again after revert?
-
   it('revert: should refund ETH and return allocated token to pool', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
 
@@ -359,21 +357,18 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(balanceOf.eq(0)); // Buyer should have 0 token
   });
 
-  // TODO what if they purchase again and revertPurchase is called again before sendRefund is called?
   it('revert: if purchase again and revertPurchase is called again before sendRefund is called', async () => {
     const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
     await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS});
 
     // 1. Purchase (again)
-    const value = web3.toWei(0.01, 'ether');
-    const bigValue = new web3.BigNumber(value);
+    const value = web3.toWei(web3.toBigNumber(0.01), 'ether');
     let BUYER_BALANCE_BEFORE = new web3.eth.getBalance(BUYER_ADDRESS);
     let transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: value});
     let transactionCost = calculateGasByTransaction(transaction);
 
-    const valueSecond = web3.toWei(0.02, 'ether');
-    const bigValueSecond = new web3.BigNumber(valueSecond);
+    const valueSecond = web3.toWei(web3.toBigNumber(0.02), 'ether');
     transaction = await instance.sendTransaction({from: BUYER_ADDRESS, value: valueSecond});
     transactionCost = transactionCost.plus(calculateGasByTransaction(transaction));
 
@@ -382,7 +377,7 @@ contract('TESTToken', async (accounts) => {
     await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     let pendingRefunds_ = await instance.pendingRefunds_.call(BUYER_ADDRESS);
 
-    assert.isTrue(pendingRefunds_.eq(bigValue.plus(bigValueSecond)));
+    assert.isTrue(pendingRefunds_.eq(value.plus(valueSecond))); // 
     let buyerTokenBalance = await instance.balanceOf.call(BUYER_ADDRESS);
 
     assert.isTrue(buyerTokenBalance.eq(0));
@@ -392,7 +387,6 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(balanceBeforeWithPaidGas.eq(BUYER_BALANCE_AFTER));
   });
 
-  // TODO what if they purchase again before sendRefund is called?
   it('revert: should not affect purchase after revert and before sendRefund functions call', async () => {
     const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
@@ -431,7 +425,6 @@ contract('TESTToken', async (accounts) => {
     assert.isTrue(balanceAfterPurchase.eq(balanceBeforePurchase.minus(totalPurchaseValue)));
   });
 
-  // TODO what if they purchase again before sendRefund is called?
   it('revert: should not affect purchase after revert and before sendRefund functions call', async () => {
     const instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS});
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
