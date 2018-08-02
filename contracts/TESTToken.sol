@@ -187,7 +187,7 @@ contract TESTToken {
     /* Withdraw current available ETH in contract */
     function withdraw() external {
         require(msg.sender == owner_);                      //Only owner
-        uint256 withdrawalValue = address(this).balance.sub(totalRefunds_);
+        uint256 withdrawalValue = address(this).balance.sub(totalRefunds_); //Possible transaction order dependence caused by totalRefunds_
 
         if (!saleFinalized_) {                              //Limit total withdraw ability up to MAX_WEI_WITHDRAWAL
             uint256 newWeiWithdrawn = weiWithdrawn_.add(withdrawalValue);
