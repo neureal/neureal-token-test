@@ -571,17 +571,21 @@ contract('TESTToken', async (accounts) => {
     assert.equal(contractBalance, 0);
   });
 
+  const runPurchase = async (instance) => {
+    try { await instance.sendTransaction({from: BUYER_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000}); } catch (err) { console.log('purchase revert'); }
+    await logState('after purchase', instance, BUYER_ADDRESS);
+  }
   const runWithdraw = async (instance) => {
-    try { await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000}); } catch (err) { }
-    // await logState('after withdraw', instance, BUYER_ADDRESS);
+    try { await instance.withdraw({from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000}); } catch (err) { console.log('withdraw revert'); }
+    await logState('after withdraw', instance, BUYER_ADDRESS);
   }
   const runRevert = async (instance) => {
-    try { await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000}); } catch (err) { }
-    // await logState('after revertPurchase', instance, BUYER_ADDRESS);
+    try { await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000}); } catch (err) { console.log('revertPurchase revert'); }
+    await logState('after revertPurchase', instance, BUYER_ADDRESS);
   }
   const runRefund = async (instance) => {
-    try { await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000}); } catch (err) { }
-    // await logState('after sendRefund', instance, BUYER_ADDRESS);
+    try { await instance.sendRefund(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000}); } catch (err) { console.log('sendRefund revert'); }
+    await logState('after sendRefund', instance, BUYER_ADDRESS);
   }
   permutator([runWithdraw, runRevert, runRefund]).forEach((element) => {
     it('withdraw: test miner transaction re-ordering (totalRefunds_ affected by revertPurchase and sendRefund)', async () => {
@@ -593,7 +597,7 @@ contract('TESTToken', async (accounts) => {
       // await logState('initial state', instance, BUYER_ADDRESS);
 
       await instance.sendTransaction({from: BUYER_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000});
-      // await logState('after purchase', instance, BUYER_ADDRESS);
+      await logState('after purchase', instance, BUYER_ADDRESS);
 
       for (let run of element) {
         await run(instance);
