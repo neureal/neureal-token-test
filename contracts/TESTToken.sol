@@ -76,14 +76,13 @@ contract TESTToken {
     uint256 public totalRefunds_ = 0;                       //Current Wei locked up in refunds
     mapping(address => uint256) public pendingRefunds_;
 
-    enum Phase {
-        BeforeSale,
-        Sale,
-        Finalized
+    bool private saleStarted_ = false;
+    function saleStarted() external view returns (bool) {
+        return saleStarted_;
     }
-    Phase private phase_ = Phase.BeforeSale;                //Current sale state
-    function phase() external view returns (Phase) {
-        return phase_;
+    bool private saleFinalized_ = false;
+    function saleFinalized() external view returns (bool) {
+        return saleFinalized_;
     }
 
 
@@ -136,14 +135,14 @@ contract TESTToken {
 
     /* KYC/AML/accredited auth whitelisting */
     function whitelist(address _who) external {
-        require(phase_ != Phase.Finalized);                 //Only works before and during sale
+        require(!saleFinalized_);                           //Only works before and during sale
         require(msg.sender == WHITELIST_PROVIDER);          //Only whitelist provider
         whitelist_[_who] = true;
         //DONT check blacklist (coinbase, exchange, etc) here, check in auth website
     }
     //TODO do we really need this?
     function whitelistMany(address[] _who) external {
-        require(phase_ != Phase.Finalized);                 //Only works before and during sale
+        require(!saleFinalized_);                           //Only works before and during sale
         require(msg.sender == WHITELIST_PROVIDER);          //Only whitelist provider
         for (uint256 i = 0; i < _who.length; i++) {
             whitelist_[_who[i]] = true;
@@ -151,14 +150,14 @@ contract TESTToken {
     }
     //TODO do we really need this?
     function whitelistRemove(address _who) external {
-        require(phase_ != Phase.Finalized);                 //Only works before and during sale
+        require(!saleFinalized_);                           //Only works before and during sale
         require(msg.sender == WHITELIST_PROVIDER);          //Only whitelist provider
         whitelist_[_who] = false;
     }
 
     /* Token purchase (called whenever someone tries to send ether to this contract) */
     function() external payable {
-        require(phase_ == Phase.Sale);                      //Only sell during sale
+        require(saleStarted_ && !saleFinalized_);           //Only sell during sale
         require(msg.value != 0);                            //Stop spamming, contract only calls, etc
         require(msg.sender != address(0));                  //Prevent transfer to 0x0 address
         require(msg.sender != address(this));               //Prevent calls from this.transfer(this)
@@ -189,7 +188,8 @@ contract TESTToken {
     function withdraw() external {
         require(msg.sender == owner_);                      //Only owner
         uint256 withdrawalValue = address(this).balance.sub(totalRefunds_);
-        if (phase_ != Phase.Finalized) {
+
+        if (!saleFinalized_) {                              //Limit total withdraw ability up to MAX_WEI_WITHDRAWAL
             uint256 newWeiWithdrawn = weiWithdrawn_.add(withdrawalValue);
             if (newWeiWithdrawn > MAX_WEI_WITHDRAWAL) {
                 withdrawalValue = MAX_WEI_WITHDRAWAL.sub(weiWithdrawn_); //Withdraw up to the full amount left
@@ -208,7 +208,7 @@ contract TESTToken {
 
     /* Revert token purchase, lock all ETH for refund, put all allocated token back in allocation pool */
     function revertPurchase(address _who) external payable {
-        require(phase_ == Phase.Sale);                      //Only revert during sale, afterwords can revert using NEUREAL TGE
+        require(saleStarted_ && !saleFinalized_);           //Only revert during sale, afterwords can revert using NEUREAL TGE
         require(msg.sender == owner_);                      //Only owner
         require(_who != address(0));                        //Prevent refund to 0x0 address
         require(balances_[_who] != 0);                      //Prevent if never purchased
@@ -247,7 +247,7 @@ contract TESTToken {
     
     /* Owner allocation, create new token (under conditions) without costing ETH */
     function allocate(address _to, uint256 _value) external {
-        require(phase_ != Phase.Finalized);                 //Only works before and during sale
+        require(!saleFinalized_);                           //Only works before and during sale
         require(msg.sender == owner_);                      //Only owner
         require(_value != 0);                               //Allocate is not a transfer call from a wallet app, so this is ok
         require(_to != address(0));                         //Prevent transfer to 0x0 address
@@ -270,14 +270,14 @@ contract TESTToken {
 
     /* state transition */
     function transition() external {
-        require(phase_ != Phase.Finalized);                 //Only works before and during sale
+        require(!saleFinalized_);                           //Only works before and during sale
         require(msg.sender == owner_);                      //Only owner
         
-        if (phase_ == Phase.BeforeSale) {
-            phase_ = Phase.Sale;
+        if (!saleStarted_) {
+            saleStarted_ = true;
             emit SaleStarted();
-        } else if (phase_ == Phase.Sale) {
-            phase_ = Phase.Finalized;
+        } else {
+            saleFinalized_ = true;
             emit SaleFinalized();
         }
     }

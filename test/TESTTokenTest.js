@@ -116,8 +116,11 @@ contract('TESTToken', async (accounts) => {
     let whitelisted = await instance.whitelisted.call(0);
     assert.strictEqual(whitelisted, false);
 
-    let phase = await instance.phase.call();
-    assert.strictEqual(phase.toFormat(), '0');
+    let saleStarted = await instance.saleStarted.call();
+    assert.strictEqual(saleStarted, false);
+
+    let saleFinalized = await instance.saleFinalized.call();
+    assert.strictEqual(saleFinalized, false);
 
     let totalSupply = await instance.totalSupply.call();
     assert.equal(totalSupply, 0);
@@ -245,19 +248,25 @@ contract('TESTToken', async (accounts) => {
     assert.isUndefined(result);
   });
 
-  it('transition: should cycle state from BeforeSale to Sale to Finalized using transition function, then revert on 3rd time', async () => {
+  it('transition: should first set saleStarted, then set saleFinalized, then revert on 3rd time', async () => {
     let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
 
-    let phase = await instance.phase.call();
-    assert.strictEqual(phase.toFormat(), '0');
+    let saleStarted = await instance.saleStarted.call();
+    let saleFinalized = await instance.saleFinalized.call();
+    assert.strictEqual(saleStarted, false);
+    assert.strictEqual(saleFinalized, false);
 
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
-    phase = await instance.phase.call();
-    assert.strictEqual(phase.toFormat(), '1');
+    saleStarted = await instance.saleStarted.call();
+    saleFinalized = await instance.saleFinalized.call();
+    assert.strictEqual(saleStarted, true);
+    assert.strictEqual(saleFinalized, false);
 
     await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
-    phase = await instance.phase.call();
-    assert.strictEqual(phase.toFormat(), '2');
+    saleStarted = await instance.saleStarted.call();
+    saleFinalized = await instance.saleFinalized.call();
+    assert.strictEqual(saleStarted, true);
+    assert.strictEqual(saleFinalized, true);
 
     try {
       var result = await instance.transition({from: CONTRACT_CREATOR_ADDRESS});
