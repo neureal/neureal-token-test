@@ -28,16 +28,15 @@ contract TESTToken {
 
     //TODO use this as a constant when LIVE so that the source code signature includes it and is unique
     //TODO Set this to the Neureal multisig wallet that will take the ETH from the sale
-    // address private constant NEUREAL_ETH_WALLET = 0x0000000000000000000000000000000000000000;
+    // address public constant NEUREAL_ETH_WALLET = 0x0000000000000000000000000000000000000000;
     address public NEUREAL_ETH_WALLET;
 
     //TODO use this as a constant when LIVE so that the source code signature includes it and is unique
     //TODO Set this to the address of the wallet that has authority to send the whitelisted Ethereum addresses
-    // address private constant WHITELIST_PROVIDER = 0x0000000000000000000000000000000000000000;
+    // address public constant WHITELIST_PROVIDER = 0x0000000000000000000000000000000000000000;
     address public WHITELIST_PROVIDER;
 
-    //TODO Set this to the opening rate of token per ETH here based on https://www.coinbase.com/charts
-    //ex: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
+    //Example: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
     uint256 public constant OPENING_RATE = 6400;
 
     //TODO change these values to the real values when going LIVE
@@ -58,7 +57,7 @@ contract TESTToken {
         return whitelist_[_who];
     }
 
-    uint256 private totalSale_ = 0;                         //Current total token sold (only for viewing)
+    uint256 private totalSale_ = 0;                         //Current total token sold
     function totalSale() external view returns (uint256) {
         return totalSale_;
     }
@@ -66,7 +65,7 @@ contract TESTToken {
     function totalSaleWei() external view returns (uint256) {
         return totalSaleWei_;
     }
-    uint256 private totalAllocated_ = 0;                    //Current total token allocated (only for viewing)
+    uint256 private totalAllocated_ = 0;                    //Current total token allocated
     function totalAllocated() external view returns (uint256) {
         return totalAllocated_;
     }
