@@ -1,5 +1,6 @@
 pragma solidity 0.4.24;
 
+// TODO change these back to assert and add require pre-checks in functions that use them
 library SafeMath {
     function mul(uint256 a, uint256 b) internal pure returns (uint256 c) {
         if (a == 0) return 0;
@@ -36,6 +37,7 @@ contract TESTToken {
     // address public constant WHITELIST_PROVIDER = 0x0000000000000000000000000000000000000000;
     address public WHITELIST_PROVIDER;
 
+    // The number of token that can be purchased with one Wei
     // Example: $448 (per ETH) / $0.07 (opening price) = 6400 (works for wei as long as token decimals=18 because ETH=10^18 wei)
     uint256 public constant OPENING_RATE = 6400;
 
@@ -70,7 +72,7 @@ contract TESTToken {
         return totalAllocated_;
     }
 
-    // TODO Make private when going LIVE ??
+    // TODO Make all three private when going LIVE
     uint256 public weiWithdrawn_ = 0;                       // Current total Wei withdrawn to NEUREAL_ETH_WALLET
     uint256 public totalRefunds_ = 0;                       // Current Wei locked up in refunds
     mapping(address => uint256) public pendingRefunds_;
@@ -139,7 +141,7 @@ contract TESTToken {
         whitelist_[_who] = true;
         // DONT check blacklist (coinbase, exchange, etc) here, check in auth website
     }
-    // TODO do we really need this?
+    // TODO do we really need this? Check security of array input
     function whitelistMany(address[] _who) external {
         require(!saleFinalized_);                           // Only works before and during sale
         require(msg.sender == WHITELIST_PROVIDER);          // Only whitelist provider
