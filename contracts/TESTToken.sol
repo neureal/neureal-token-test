@@ -239,8 +239,8 @@ contract TESTToken {
         totalRefunds_ = totalRefunds_.sub(weiValue);
         emit Refund(_who, weiValue);
         
-        _who.transfer(weiValue);
-        // require(_who.call.value(weiValue)()); // TODO I think I need to use this alternative to send more gas than 2300 to be able to refund to contracts
+        // _who.transfer(weiValue);
+        require(_who.call.value(weiValue)()); // TODO Use this so that more gas is available than 2300 stipend to be able to refund to contracts
     }
     
     

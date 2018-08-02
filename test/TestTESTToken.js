@@ -1,4 +1,5 @@
 const TESTToken = artifacts.require('./TESTToken.sol');
+const ContractTests = artifacts.require('./ContractTests.sol');
 console.log('TESTToken.defaults:\n', TESTToken.defaults());
 
 const deployGas = 2200000;
@@ -58,6 +59,36 @@ contract('TESTToken', async (accounts) => {
 
   // let receipt = await web3.eth.sendTransaction({from: accounts[0], to: accounts[1], value: fromETHtoWeiBN(1.0), gas: 4712388, gasPrice: 100000000000});
   // console.log('receipt: ', receipt);
+
+  it('reentrancy: should not be suseptable to reentrancy', async () => {
+    let instance = await TESTToken.new(NEUREAL_ETH_WALLET_ADDRESS, WHITELIST_PROVIDER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+    let instanceTests = await ContractTests.new(instance.address, {from: BUYER_ADDRESS, gas: deployGas, gasPrice: deployGasPrice});
+
+    await instance.transition({from: CONTRACT_CREATOR_ADDRESS}); // set to Sale
+    await instance.whitelist(instanceTests.address, {from: WHITELIST_PROVIDER_ADDRESS}); // must be whitelisted
+    await instance.whitelist(BUYER_ADDRESS, {from: WHITELIST_PROVIDER_ADDRESS}); // must be whitelisted
+
+    // try { let purchase = await instanceTests.purchase({from: BUYER_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000}); } catch (err) { }
+    let purchase = await instanceTests.purchase({from: BUYER_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000});
+    console.log('contract purchase (gasUsed): ', purchase.receipt.gasUsed);
+
+    let purchaseBuyer = await instance.sendTransaction({from: BUYER_ADDRESS, value: fromETHtoWeiBN(0.02), gas: 4712388, gasPrice: 100000000000});
+    console.log('regular purchase (gasUsed): ', purchaseBuyer.receipt.gasUsed);
+
+    await instance.revertPurchase(instanceTests.address, {from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000});
+    await instance.revertPurchase(BUYER_ADDRESS, {from: CONTRACT_CREATOR_ADDRESS, gas: 4712388, gasPrice: 100000000000});
+
+    try { var refund = await instance.sendRefund(instanceTests.address, {from: BUYER_ADDRESS, gas: 4712388, gasPrice: 100000000000}); } catch (err) { console.log('contract refund revert'); }
+    if (refund) console.log('contract refund (gasUsed): ', refund.receipt.gasUsed);
+
+    var refundBuyer = await instance.sendRefund(BUYER_ADDRESS, {from: BUYER_ADDRESS, gas: 4712388, gasPrice: 100000000000});
+    console.log('regular refund (gasUsed): ', refundBuyer.receipt.gasUsed);
+
+    let contractBalance = await web3.eth.getBalance(instance.address);
+    console.log('Contract balance: ', toETHString(contractBalance));
+    let contractBalanceTests = await web3.eth.getBalance(instanceTests.address);
+    console.log('Test Contract balance: ', toETHString(contractBalanceTests));
+  });
 
   // CREATION
 
@@ -349,8 +380,9 @@ contract('TESTToken', async (accounts) => {
     let contractBalance = await web3.eth.getBalance(instance.address);
     let pendingRefunds_ = await instance.pendingRefunds_.call(address);
     let totalRefunds_ = await instance.totalRefunds_.call();
-    console.log('total_token[%s] sale_token[%s] buyer_token[%s]   total_sale_eth[%s] actual_contract_eth[%s] buyer_pending_refund_eth[%s] total_locked_refund_eth[%s] :' + log,
-      toETHString(totalSupply), toETHString(totalSale), toETHString(balanceOf), toETHString(totalSaleWei), toETHString(contractBalance), toETHString(pendingRefunds_), toETHString(totalRefunds_));
+    let neurealEthBalance = await web3.eth.getBalance(NEUREAL_ETH_WALLET_ADDRESS);
+    console.log('total_token[%s] sale_token[%s] buyer_token[%s]   total_sale_eth[%s] actual_contract_eth[%s] buyer_pending_refund_eth[%s] total_locked_refund_eth[%s] neureal_eth_wallet[%s]:' + log,
+      toETHString(totalSupply), toETHString(totalSale), toETHString(balanceOf), toETHString(totalSaleWei), toETHString(contractBalance), toETHString(pendingRefunds_), toETHString(totalRefunds_), toETHString(neurealEthBalance));
   }
 
   it('revert: should refund ETH and return allocated token to pool', async () => {
