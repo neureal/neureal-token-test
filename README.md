@@ -1,4 +1,6 @@
 # Ethereum contracts for Neureal
+[![Heimdall Scanner](https://heimdall.maddevs.io/badge/github/neureal/neureal-token-test)](https://heimdall.maddevs.io/report/github/neureal/neureal-token-test)   
+
 **_NOTICE: These contracts are subject to changes until they are officially released and deployed on the main Ethereum Network_** 
 
 ### Ethereum standard token contract (ERC20)
